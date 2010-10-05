@@ -1,0 +1,18 @@
+application: tf2apiproxy
+version: 3
+runtime: python
+api_version: 1
+
+
+handlers:
+
+- url: /api/v1/.*
+  script: proxyapp.py
+
+- url: /favicon.ico
+  static_files: htdocs/favicon.ico
+  upload: htdocs/favicon.ico
+
+- url: /.*
+  static_files: htdocs/index.html
+  upload: htdocs/index.html
