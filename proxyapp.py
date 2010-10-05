@@ -85,9 +85,9 @@ class SchemaApp(ProxyApp):
 	schema = self.cache_get(lang)
 	if schema:
 	    return schema
-	## we don't have to parse this as json, but the urls get
-	## un-escaped when we do.
 	schema = jsonloads(urlopen(self.format_url(lang)).read())
+	schema = schema['result']['items']['item']
+	schema = dict((item.pop('defindex'), item) for item in schema)
 	self.cache_set(schema, lang)
 	return schema
 
