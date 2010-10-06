@@ -1,5 +1,5 @@
 application: tf2apiproxy
-version: 4
+version: 7
 runtime: python
 api_version: 1
 
@@ -8,6 +8,10 @@ handlers:
 
 - url: /api/v1/.*
   script: proxyapp.py
+
+- url: /admin.d/.*
+  script: adminapp.py
+  login: admin
 
 - url: /favicon.ico
   static_files: htdocs/favicon.ico

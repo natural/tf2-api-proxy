@@ -32,7 +32,7 @@ class ProxyApp(RequestHandler):
     ##
     ## Base class for proxy app handlers.
     ##
-    cache_time = 60 * 5
+    cache_time = 60 * 60
 
     def web_api_key(self):
 	return self.request.environ.get('WEB_API_KEY', '')
@@ -86,8 +86,6 @@ class SchemaApp(ProxyApp):
 	if schema:
 	    return schema
 	schema = jsonloads(urlopen(self.format_url(lang)).read())
-	schema = schema['result']['items']['item']
-	schema = dict((item.pop('defindex'), item) for item in schema)
 	self.cache_set(schema, lang)
 	return schema
 
@@ -96,6 +94,7 @@ class ItemsApp(ProxyApp):
     ##
     ## Proxy for the items of a given Steam ID.  Does not support language codes.
     ##
+    cache_time = 60 * 5
     items_url_fs = ('http://api.steampowered.com/ITFItems_440/GetPlayerItems/v0001/'
 		    '?key=%s&SteamID=%s')
 
@@ -119,6 +118,7 @@ class SearchApp(ProxyApp):
     ##
     ## Proxy for searching for a Steam ID by profile name.
     ##
+    cache_time = 60 * 5
     community_url = 'http://steamcommunity.com/'
     search_url = community_url + 'actions/Search?T=Account&K=%s'
 
@@ -160,6 +160,7 @@ class ProfileApp(ProxyApp):
     ## Proxy for the profile of a given Steam ID.  Does not support
     ## language codes.
     ##
+    cache_time = 60 * 5
     profile_url_fs = ('http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0001/'
 		      '?key=%s&steamids=%s')
 
@@ -182,13 +183,10 @@ class ProfileApp(ProxyApp):
 	return data['response']['players']['player'][0]['communityvisibilitystate'] == 3
 
     def reformat_profile(self, data):
-	result, data = {}, data
 	player = data['response']['players']['player'][0]
 	keys = ['steamid', 'personaname', 'profileurl', 'avatar',
 		'avatarmedium', 'avatarfull']
-	for key in keys:
-	    result[key] = player[key]
-	return result
+	return dict([(k, player[k]) for k in keys])
 
     def format_url(self, id64):
 	return self.profile_url_fs % (self.web_api_key(), id64)
@@ -210,3 +208,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
