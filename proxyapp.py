@@ -186,6 +186,8 @@ class ProfileApp(ProxyApp):
 	player = data['response']['players']['player'][0]
 	keys = ['steamid', 'personaname', 'profileurl', 'avatar',
 		'avatarmedium', 'avatarfull']
+	## help JSON.parse in chrome not suck
+	player['steamid'] = str(player['steamid'])
 	return dict([(k, player[k]) for k in keys])
 
     def format_url(self, id64):
