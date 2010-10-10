@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from cgi import parse_qs as parseqs
+from datetime import datetime
 from logging import info
 from os import path
 from urllib2 import urlopen, quote as urlquote
@@ -58,10 +59,13 @@ class ProxyApp(RequestHandler):
 	info('cache set: %s, type: %s, len: %s', key, type(value).__name__, vlen)
 	return memcache.set(key, value, kwds.get('time', self.cache_time))
 
-    def write_json(self, value):
+    def write_json(self, value, seconds):
 	value = jsondumps(value, indent=4)
 	self.response.headers['Content-Type'] = 'text/plain'
-	self.response.headers['Content-Length'] = len(value)
+	self.response.headers['Cache-Control'] = 'max-age=' + str(seconds)
+	cb = parseqs(self.request.query_string).get('callback', (None, ))[0]
+	if cb:
+	    value = '%s(%s)' % (cb, value)
 	self.response.out.write(value)
 
 
@@ -76,7 +80,7 @@ class SchemaApp(ProxyApp):
 
     def get(self):
 	schema = self.get_schema(self.request_lang())
-	self.write_json(schema)
+	self.write_json(schema, seconds=self.cache_time)
 
     def format_url(self, lang):
 	return self.schema_url_fs % (self.web_api_key(), lang, )
@@ -103,7 +107,7 @@ class ItemsApp(ProxyApp):
 		    '?key=%s&SteamID=%s')
 
     def get(self, id64):
-	self.write_json(self.get_items(id64))
+	self.write_json(self.get_items(id64), seconds=self.cache_time)
 
     def get_items(self, id64):
 	items = self.cache_get(id64)
@@ -131,7 +135,7 @@ class SearchApp(ProxyApp):
     search_url = community_url + 'actions/Search?T=Account&K=%s'
 
     def get(self, name):
-	self.write_json(self.search(name))
+	self.write_json(self.search(name), seconds=self.cache_time)
 
     def search(self, name):
 	# See CREDITS.txt for copyright.
@@ -176,7 +180,7 @@ class ProfileApp(ProxyApp):
 		      '?key=%s&steamids=%s')
 
     def get(self, id64):
-	self.write_json(self.get_profile(id64))
+	self.write_json(self.get_profile(id64), seconds=self.cache_time)
 
     def get_profile(self, id64):
 	profile = self.cache_get(id64)
