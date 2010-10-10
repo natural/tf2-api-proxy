@@ -35,7 +35,7 @@ routes = (
 
 
 def main():
-    app = WSGIApplication(routes, debug=True)
+    app = WSGIApplication(routes)
     app = environ_extras_middleware(app)
     run_wsgi_app(app)
 

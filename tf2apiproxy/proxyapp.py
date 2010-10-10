@@ -13,7 +13,7 @@ from simplejson import loads as jsonloads, dumps as jsondumps
 
 
 def api_keys():
-    return [key.strip() for key in open('apikey.txt').readlines()]
+    return [key.strip() for key in open('../apikey.txt').readlines()]
 api_keys = api_keys()
 
 
@@ -60,7 +60,7 @@ class ProxyApp(RequestHandler):
 
     def write_json(self, value):
 	value = jsondumps(value, indent=4)
-	self.response.headers['Content-Type'] = 'application/json'
+	self.response.headers['Content-Type'] = 'text/plain'
 	self.response.headers['Content-Length'] = len(value)
 	self.response.out.write(value)
 
@@ -85,8 +85,12 @@ class SchemaApp(ProxyApp):
 	schema = self.cache_get(lang)
 	if schema:
 	    return schema
-	schema = jsonloads(urlopen(self.format_url(lang)).read())
-	self.cache_set(schema, lang)
+	try:
+	    schema = jsonloads(urlopen(self.format_url(lang)).read())
+	except (Exception, ), exc:
+	    schema = {} # what?
+	else:
+	    self.cache_set(schema, lang)
 	return schema
 
 
@@ -105,9 +109,13 @@ class ItemsApp(ProxyApp):
 	items = self.cache_get(id64)
 	if items:
 	    return items
-	items = urlopen(self.format_url(id64)).read()
-	items = jsonloads(items)['result']['items']['item']
-	self.cache_set(items, id64)
+	try:
+	    items = urlopen(self.format_url(id64)).read()
+	except (Exception, ), exc:
+	    items = {} # wha?
+	else:
+	    items = jsonloads(items)['result']['items']['item']
+	    self.cache_set(items, id64)
 	return items
 
     def format_url(self, id64):
@@ -132,7 +140,10 @@ class SearchApp(ProxyApp):
 	    return results
 	search_url = self.format_url(name)
 	try:
-	    res = urlopen(search_url).read().split('<a class="linkTitle" href="')
+	    try:
+		res = urlopen(search_url).read().split('<a class="linkTitle" href="')
+	    except (Exception, ), exc:
+		res = [] # wha?
 	    results = []
 	    for user in res:
 		if user.startswith(self.community_url):
@@ -171,7 +182,11 @@ class ProfileApp(ProxyApp):
 	profile = self.cache_get(id64)
 	if profile:
 	    return profile
-	profile = jsonloads(urlopen(self.format_url(id64)).read())
+	try:
+	    profile = jsonloads(urlopen(self.format_url(id64)).read())
+	except (Exception, ), exc:
+	    profile = {'exception': str(exc)} # wha?
+	    return profile
 	if not self.is_public(profile):
 	    profile = {'exception':'private profile'}
 	else:
@@ -203,7 +218,7 @@ routes = (
 
 
 def main():
-    app = WSGIApplication(routes, debug=True)
+    app = WSGIApplication(routes)
     app = environ_extras_middleware(app)
     run_wsgi_app(app)
 
