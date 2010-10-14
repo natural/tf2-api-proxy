@@ -5,7 +5,7 @@ from google.appengine.api import memcache
 from google.appengine.ext.webapp import RequestHandler, WSGIApplication
 from google.appengine.ext.webapp.util import run_wsgi_app
 
-from proxyapp import SchemaApp, environ_extras_middleware
+from tf2apiproxy.proxyapp import SchemaApp, environ_extras_middleware
 
 
 class CachePrimer(RequestHandler):

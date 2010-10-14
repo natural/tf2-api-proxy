@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from cgi import parse_qs as parseqs
-from datetime import datetime
+from datetime import datetime, timedelta
 from logging import info
 from os import path
 from urllib2 import urlopen, quote as urlquote
@@ -61,7 +61,8 @@ class ProxyApp(RequestHandler):
 
     def write_json(self, value, seconds):
 	value = jsondumps(value, indent=4)
-	self.response.headers['Content-Type'] = 'text/plain'
+	self.response.headers['Content-Type'] = 'application/x-javascript'
+	self.response.headers['Expires'] =  (datetime.now() + timedelta(hours=1)).ctime()
 	self.response.headers['Cache-Control'] = 'max-age=' + str(seconds)
 	cb = parseqs(self.request.query_string).get('callback', (None, ))[0]
 	if cb:
