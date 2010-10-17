@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from logging import info
 from os import path
 from urllib2 import urlopen, quote as urlquote
+from wsgiref.util import application_uri
 
 from google.appengine.api import memcache
 from google.appengine.ext.webapp import RequestHandler, WSGIApplication
@@ -79,6 +80,24 @@ class SchemaApp(ProxyApp):
     schema_url_fs = ('http://api.steampowered.com/ITFItems_440/GetSchema/v0001/'
                      '?key=%s&format=json&language=%s')
 
+    img_fixes = {
+	5027 : 'media/img/TF_Tool_PaintCan_1.png',
+	5028 : 'media/img/TF_Tool_PaintCan_2.png',
+	5029 : 'media/img/TF_Tool_PaintCan_3.png',
+	5030 : 'media/img/TF_Tool_PaintCan_4.png',
+	5031 : 'media/img/TF_Tool_PaintCan_5.png',
+	5032 : 'media/img/TF_Tool_PaintCan_6.png',
+	5033 : 'media/img/TF_Tool_PaintCan_7.png',
+	5034 : 'media/img/TF_Tool_PaintCan_8.png',
+	5035 : 'media/img/TF_Tool_PaintCan_9.png',
+	5036 : 'media/img/TF_Tool_PaintCan_10.png',
+	5037 : 'media/img/TF_Tool_PaintCan_11.png',
+	5038 : 'media/img/TF_Tool_PaintCan_12.png',
+	5039 : 'media/img/TF_Tool_PaintCan_13.png',
+	5040 : 'media/img/TF_Tool_PaintCan_14.png',
+    }
+
+
     def get(self):
 	schema = self.get_schema(self.request_lang())
 	self.write_json(schema, seconds=self.cache_time)
@@ -92,6 +111,11 @@ class SchemaApp(ProxyApp):
 	    return schema
 	try:
 	    schema = jsonloads(urlopen(self.format_url(lang)).read())
+	    app_uri = application_uri(self.request.environ)
+	    img_fixes = self.img_fixes
+	    for item in schema['result']['items']['item']:
+		if item['defindex'] in img_fixes:
+		    item['image_url'] = app_uri + img_fixes[item['defindex']]
 	except (Exception, ), exc:
 	    schema = {} # what?
 	else:
@@ -230,4 +254,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
