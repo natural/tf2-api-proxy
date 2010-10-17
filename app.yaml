@@ -1,15 +1,14 @@
 application: tf2apiproxy
-version: 12
+version: 15
 runtime: python
 api_version: 1
 
 
 handlers:
 
-- url: /media/img/(.*\.png)
-  static_files: media/img/\1
+- url: /media
+  static_dir: media
   expiration: "5d 23h"
-  upload: /media/img/(.*\.png)
 
 - url: /api/v1/.*
   script: tf2apiproxy/proxyapp.py
