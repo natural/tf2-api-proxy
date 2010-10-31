@@ -8,6 +8,7 @@ from urllib2 import urlopen, quote as urlquote
 from wsgiref.util import application_uri
 
 from google.appengine.api import memcache
+from google.appengine.ext import db
 from google.appengine.ext.webapp import RequestHandler, WSGIApplication
 from google.appengine.ext.webapp.util import run_wsgi_app
 
@@ -28,6 +29,11 @@ def environ_extras_middleware(app, factory=api_key_factory):
 	environ.update(factory())
 	return app(environ, start_response)
     return environ_extras_app
+
+
+class History(db.Model):
+    url = db.StringProperty(required=True, indexed=True)
+    payload = db.TextProperty()
 
 
 class ProxyApp(RequestHandler):
@@ -61,7 +67,8 @@ class ProxyApp(RequestHandler):
 	return memcache.set(key, value, kwds.get('time', self.cache_time))
 
     def write_json(self, value, seconds):
-	value = jsondumps(value, indent=4)
+	if not isinstance(value, (basestring, )):
+	    value = jsondumps(value, indent=4)
 	self.response.headers['Content-Type'] = 'application/x-javascript'
 	self.response.headers['Expires'] =  (datetime.now() + timedelta(hours=1)).ctime()
 	self.response.headers['Cache-Control'] = 'max-age=' + str(seconds)
@@ -106,19 +113,39 @@ class SchemaApp(ProxyApp):
 	return self.schema_url_fs % (self.web_api_key(), lang, )
 
     def get_schema(self, lang):
+	## 0.  memcache hit -> response
 	schema = self.cache_get(lang)
 	if schema:
 	    return schema
+	url = self.format_url(lang)
+
+	## 1. mmemcache miss -> url fetch
 	try:
-	    schema = jsonloads(urlopen(self.format_url(lang)).read())
+	    schema = jsonloads(urlopen(url).read())
 	    app_uri = application_uri(self.request.environ)
 	    img_fixes = self.img_fixes
 	    for item in schema['result']['items']['item']:
 		if item['defindex'] in img_fixes:
 		    item['image_url'] = app_uri + img_fixes[item['defindex']]
 	except (Exception, ), exc:
-	    schema = {} # what?
+	    ## 1a.  fetch failure -> history lookup
+	    storage = History.all().filter('url =', url).get()
+	    if storage:
+		## this assumes that the schema has already been
+		## parsed and fixed at least one time.
+		schema = jsonloads(storage.payload)
+		self.cache_set(schema, lang)
+	    else:
+		## 1b. total failure
+		schema = {}
 	else:
+	    ## 2.  store in cache and history table; the size should
+	    ## be okay because the schema was parsed successfully.
+	    storage = History.all().filter('url =', url).get()
+	    if storage is None:
+		storage = History(url=url)
+	    storage.payload = jsondumps(schema, indent=4)
+	    storage.put()
 	    self.cache_set(schema, lang)
 	return schema
 
@@ -135,15 +162,31 @@ class ItemsApp(ProxyApp):
 	self.write_json(self.get_items(id64), seconds=self.cache_time)
 
     def get_items(self, id64):
+	## 0.  memcache hit -> response
 	items = self.cache_get(id64)
 	if items:
 	    return items
+	url = self.format_url(id64)
+
+	## 1.  memcache miss -> url fetch
 	try:
-	    items = urlopen(self.format_url(id64)).read()
+	    items = jsonloads(urlopen(url).read())['result']['items']['item']
 	except (Exception, ), exc:
-	    items = {} # wha?
+	    ## 1a.  fetch failure -> history lookup
+	    storage = History.all().filter('url =', url).get()
+	    if storage:
+		items = jsonloads(storage.payload)
+		self.cache_set(items, id64)
+	    else:
+		## 1b.  total failure
+		items = {}
 	else:
-	    items = jsonloads(items)['result']['items']['item']
+	    ## 2.  store in cache and history table
+	    storage = History.all().filter('url =', url).get()
+	    if storage is None:
+		storage = History(url=url)
+	    storage.payload = jsondumps(items, indent=4)
+	    storage.put()
 	    self.cache_set(items, id64)
 	return items
 
@@ -164,9 +207,11 @@ class SearchApp(ProxyApp):
 
     def search(self, name):
 	# See CREDITS.txt for copyright.
+	## 0. memcache hit -> response
 	results = self.cache_get(name)
 	if results:
 	    return results
+
 	search_url = self.format_url(name)
 	try:
 	    try:
@@ -208,23 +253,43 @@ class ProfileApp(ProxyApp):
 	self.write_json(self.get_profile(id64), seconds=self.cache_time)
 
     def get_profile(self, id64):
+	## 0. memcache hit -> response
 	profile = self.cache_get(id64)
 	if profile:
 	    return profile
+	url = self.format_url(id64)
+
+	## 1.  memcache miss -> url fetch
 	try:
-	    profile = jsonloads(urlopen(self.format_url(id64)).read())
+	    profile = jsonloads(urlopen(url).read())
+	    if not self.is_public(profile):
+		profile = {'exception':'private profile'}
+	    else:
+		profile = self.reformat_profile(profile)
 	except (Exception, ), exc:
-	    profile = {'exception': str(exc)} # wha?
-	    return profile
-	if not self.is_public(profile):
-	    profile = {'exception':'private profile'}
+	    ## 1a.  fetch failure -> history lookup
+	    storage = History.all().filter('url =', url).get()
+	    if storage:
+		profile = jsonloads(storage.payload)
+		self.cache_set(profile, id64)
+	    else:
+		## 1b.  total failure
+		profile = {}
 	else:
-	    profile = self.reformat_profile(profile)
-	self.cache_set(profile, id64)
+	    ## 2.  store in cache and history table
+	    storage = History.all().filter('url =', url).get()
+	    if storage is None:
+		storage = History(url=url)
+	    storage.payload = jsondumps(profile, indent=4)
+	    storage.put()
+	    self.cache_set(profile, id64)
 	return profile
 
     def is_public(self, data):
-	return data['response']['players']['player'][0]['communityvisibilitystate'] == 3
+	try:
+	    return data['response']['players']['player'][0]['communityvisibilitystate'] == 3
+	except (Exception, ):
+	    return False
 
     def reformat_profile(self, data):
 	player = data['response']['players']['player'][0]

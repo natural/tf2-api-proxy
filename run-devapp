@@ -1,2 +1,2 @@
 #!/bin/bash
-/opt/google-appengine/dev_appserver.py  --datastore_path=./tmp/dev.ds . 2>&1 | grep -v -E "/(images|stylesheets|scripts|favicon)" --line-buffered
+/opt/google-appengine/dev_appserver.py -p 8181  --datastore_path=./tmp/dev.ds . 2>&1 | grep -v -E "/(images|stylesheets|scripts|favicon)" --line-buffered
