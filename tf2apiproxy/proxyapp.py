@@ -4,6 +4,7 @@ from cgi import parse_qs as parseqs
 from datetime import datetime, timedelta
 from logging import info
 from os import path
+from re import search
 from urllib2 import urlopen, quote as urlquote
 from wsgiref.util import application_uri
 
@@ -201,6 +202,7 @@ class SearchApp(ProxyApp):
     cache_time = 60 * 5
     community_url = 'http://steamcommunity.com/'
     search_url = community_url + 'actions/Search?T=Account&K=%s'
+    id_lookup_url = community_url + 'id/%s/?xml=1'
 
     def get(self, name):
 	self.write_json(self.search(name), seconds=self.cache_time)
@@ -229,6 +231,15 @@ class SearchApp(ProxyApp):
 			userobj['id_type'] = 'id64'
 		    else:
 			userobj['id_type'] = 'id'
+			try:
+			    exres = urlopen(self.id_lookup_url % userobj['id']).read(128)
+			    id64 = exres[exres.find('<steamID64>'):exres.find('</steamID64>')].split('>')[1]
+			except (Exception, ):
+			    raise
+			else:
+			    userobj['id'] = id64
+			    userobj['id_type'] = 'id64'
+
 		    results.append(userobj)
 	except (Exception, ), exc:
 	    results = ({'exception':str(exc), })
@@ -303,11 +314,100 @@ class ProfileApp(ProxyApp):
 	return self.profile_url_fs % (self.web_api_key(), id64)
 
 
+class OnlineStatusApp(ProxyApp):
+    cache_time = 60 * 15
+    status_url_fs = 'http://steamcommunity.com/profiles/%s/?xml=1'
+    status_rxs = (
+	('avatar_full', '<avatarFull><!\[CDATA\[(.*?)\]\]>'),
+	('avatar_icon', '<avatarIcon><!\[CDATA\[(.*?)\]\]>'),
+	('avatar_medium', '<avatarMedium><!\[CDATA\[(.*?)\]\]>'),
+	('message_state', '<stateMessage><!\[CDATA\[(.*?)\]\]>'),
+	('name', '<steamID><!\[CDATA\[(.*?)\]\]>'),
+	('online_state', '<onlineState>(.*?)</onlineState>'),
+    )
+
+    def format_url(self, id64):
+	return self.status_url_fs % (id64, )
+
+    def parse_raw(self, chunk):
+	val = {}
+	for name, rx in self.status_rxs:
+	    try:
+		val[name] = search(rx, chunk).groups()[0]
+	    except (AttributeError, IndexError, ):
+		pass
+	return val
+
+    def get(self, id64):
+	self.write_json(self.get_status(id64), seconds=self.cache_time)
+
+    def get_status(self, id64):
+	status = self.cache_get(id64)
+	if status:
+	    return status
+
+	## 1.  memcache miss -> url fetch
+	url = self.format_url(id64)
+	try:
+	    raw_status = urlopen(url).read(1024)
+	except (Exception, ), exc:
+	    ## 1a. memcache miss -> fetch failure -> history lookup
+	    storage = History.all().filter('url =', url).get()
+	    if storage:
+		status = jsonloads(storage.payload)
+		self.cache_set(status, id64)
+	    else:
+		## 1b. memcache miss -> fetch failure -> history failure =total failure
+		status = {}
+	else:
+	    ## 2.  parse, and if successful, store in cache and history table
+	    try:
+		status = self.parse_raw(raw_status)
+	    except (Exception, ), exc:
+		## 2a. parse failure
+		status = {}
+	    else:
+		storage = History.all().filter('url =', url).get()
+		if storage is None:
+		    storage = History(url=url)
+		storage.payload = jsondumps(status, indent=4)
+		storage.put()
+		self.cache_set(status, id64)
+	return status
+
+
+class NewsApp(ProxyApp):
+    cache_time = 60 * 15
+    count = 5
+    max_length = 256
+    news_url = ('http://api.steampowered.com/ISteamNews/GetNewsForApp/v0001/'
+		'?appid=440&count=%s&maxlength=%s&format=json')
+
+
+    def get(self):
+	self.write_json(self.get_news(), seconds=self.cache_time)
+
+    def get_news(self):
+	url = self.news_url % (self.count, self.max_length)
+	news = self.cache_get(url)
+	if news:
+	    return news
+	try:
+	    news = jsonloads(urlopen(url).read())['appnews']['newsitems']['newsitem']
+	except (Exception, ), exc:
+	    news = []
+	else:
+	    self.cache_set(news, url)
+	return news
+
+
 routes = (
     (r'/api/v1/items/(?P<id64>\d{17})', ItemsApp),
     (r'/api/v1/profile/(?P<id64>\d{17})', ProfileApp),
     (r'/api/v1/search/(?P<name>.{1,32})', SearchApp),
+    (r'/api/v1/status/(?P<id64>\d{17})', OnlineStatusApp),
     (r'/api/v1/schema', SchemaApp),
+    (r'/api/v1/news', NewsApp),
 )
 
 
