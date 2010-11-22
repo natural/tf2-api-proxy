@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 from cgi import parse_qs as parseqs
 from datetime import datetime, timedelta
-from logging import info
+from logging import info, error
 from os import path
 from re import search
 from urllib2 import urlopen, quote as urlquote
@@ -333,7 +333,12 @@ class OnlineStatusApp(ProxyApp):
 	val = {}
 	for name, rx in self.status_rxs:
 	    try:
-		val[name] = search(rx, chunk).groups()[0]
+		txt = search(rx, chunk).groups()[0]
+		try:
+		    txt = unicode(txt)
+		except (UnicodeDecodeError, ):
+		    txt = unicode(txt, errors='ignore')
+		val[name] = txt
 	    except (AttributeError, IndexError, ):
 		pass
 	return val
