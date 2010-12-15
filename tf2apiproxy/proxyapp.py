@@ -103,6 +103,13 @@ class SchemaApp(ProxyApp):
 	5038 : 'media/img/TF_Tool_PaintCan_12.png',
 	5039 : 'media/img/TF_Tool_PaintCan_13.png',
 	5040 : 'media/img/TF_Tool_PaintCan_14.png',
+
+	5051 : 'media/img/TF_Tool_PaintCan_15.png',
+	5052 : 'media/img/TF_Tool_PaintCan_16.png',
+	5053 : 'media/img/TF_Tool_PaintCan_17.png',
+	5054 : 'media/img/TF_Tool_PaintCan_18.png',
+	5055 : 'media/img/TF_Tool_PaintCan_19.png',
+	5056 : 'media/img/TF_Tool_PaintCan_20.png',
     }
 
 
