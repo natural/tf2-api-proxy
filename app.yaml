@@ -1,26 +1,21 @@
-application: tf2apiproxy
-version: 23
-runtime: python
 api_version: 1
-
-
+application: tf2apiproxy
 handlers:
-
-- url: /media
-  static_dir: media
-  expiration: "5d 23h"
-
-- url: /api/v1/.*
-  script: tf2apiproxy/proxyapp.py
-
-- url: /admin.d/.*
-  script: tf2apiproxy/adminapp.py
-  login: admin
-
-- url: /favicon.ico
-  static_files: htdocs/favicon.ico
-  upload: htdocs/favicon.ico
-
-- url: /.*
-  static_files: htdocs/index.html
-  upload: htdocs/index.html
+-   expiration: 1d 1h
+    static_dir: media
+    url: /media
+-   script: tf2apiproxy/proxyapp.py
+    url: /api/v1/.*
+-   login: admin
+    script: tf2apiproxy/adminapp.py
+    url: /admin.d/.*
+-   static_files: htdocs/favicon.ico
+    upload: htdocs/favicon.ico
+    url: /favicon.ico
+-   script: tf2apiproxy/api/v2/public/\1.py
+    url: /api/v2/public/(.*?)(/.*)?
+-   static_files: htdocs/index.html
+    upload: htdocs/index.html
+    url: /.*
+runtime: python
+version: 24

@@ -1,5 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+
+##
+#
+# This entire module and the urls it provides are deprecated.  New
+# work should go into the v2 package.
+#
+#
+
 from cgi import parse_qs as parseqs
 from datetime import datetime, timedelta
 from logging import info, error

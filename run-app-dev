@@ -1,0 +1,8 @@
+#!/bin/bash
+/opt/google-appengine/dev_appserver.py \
+    -p 8181 \
+    --enable_sendmail \
+    --datastore_path=./tmp/dev.ds . \
+    2>&1 | grep -v -E "/(media|stylesheets|scripts|favicon)|recording\.py" --line-buffered
+
+
