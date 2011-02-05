@@ -111,7 +111,6 @@ class SchemaApp(ProxyApp):
 	5038 : 'media/img/TF_Tool_PaintCan_12.png',
 	5039 : 'media/img/TF_Tool_PaintCan_13.png',
 	5040 : 'media/img/TF_Tool_PaintCan_14.png',
-	5046 : 'media/img/TF_Tool_PaintCan_TeamColor.png',
 
 	5051 : 'media/img/TF_Tool_PaintCan_15.png',
 	5052 : 'media/img/TF_Tool_PaintCan_16.png',
