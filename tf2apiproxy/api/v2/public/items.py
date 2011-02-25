@@ -7,7 +7,7 @@ from tf2apiproxy.lib import ApiHandler
 ## Proxy for the items of a given Steam ID.  Does not support language codes.
 ##
 class Items(ApiHandler):
-    cache_time = 60 * 5
+    cache_time = 60 * 15
     items_url_fs = ('http://api.steampowered.com/ITFItems_440/GetPlayerItems/v0001/'
 		    '?key=%s&SteamID=%s')
 

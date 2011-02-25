@@ -27,6 +27,9 @@ class Search(ApiHandler):
     def cook(self, html):
 	# See CREDITS.txt for copyright.
 	res = html.split('<a class="linkTitle" href="')
+        fallback = self.community_url + 'id/' + self.path_tail
+        #if fallback not in res:
+        #    res.append(fallback)
 	results = []
 	for user in res:
 	    if user.startswith(self.community_url):
@@ -42,7 +45,7 @@ class Search(ApiHandler):
 			exres = urlopen(self.id_lookup_url % userobj['id']).read(128)
 			id64 = exres[exres.find('<steamID64>'):exres.find('</steamID64>')].split('>')[1]
 		    except (Exception, ):
-			raise
+			pass
 		    else:
 			userobj['id'] = id64
 			userobj['id_type'] = 'id64'
