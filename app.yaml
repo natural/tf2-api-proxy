@@ -18,4 +18,4 @@ handlers:
     upload: htdocs/index.html
     url: /.*
 runtime: python
-version: 30
+version: 31
