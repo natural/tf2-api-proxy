@@ -118,6 +118,14 @@ class SchemaApp(ProxyApp):
 	5054 : 'media/img/TF_Tool_PaintCan_18.png',
 	5055 : 'media/img/TF_Tool_PaintCan_19.png',
 	5056 : 'media/img/TF_Tool_PaintCan_20.png',
+
+        5060 : 'media/img/TF_Tool_PaintCan_5060.png', # operators overalls
+        5061 : 'media/img/TF_Tool_PaintCan_5061.png', # waterlogged lab coat
+        5062 : 'media/img/TF_Tool_PaintCan_5062.png', # balaclavas are forever
+        5063 : 'media/img/TF_Tool_PaintCan_5063.png', # air of debonair
+        5064 : 'media/img/TF_Tool_PaintCan_5064.png', # value of teamwork
+        5065 : 'media/img/TF_Tool_PaintCan_5065.png', # cream spirit
+
     }
 
 
