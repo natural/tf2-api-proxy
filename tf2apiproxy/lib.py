@@ -115,7 +115,7 @@ class ApiHandler(RequestHandler):
 	    if storage:
 		## this assumes that the value has already been
 		## parsed and cooked at least one time.
-		data = self.load(zdecompress(storage.payload))
+		data = self.load(zdecompress(storage.payload.encode('ISO-8859-1')))
 		self.cache_set(data)
 	    else:
 		## 1b. total failure
@@ -128,7 +128,7 @@ class ApiHandler(RequestHandler):
 	    if storage is None:
 		storage = History(url=url)
 	    # reparse because it may have changed
-	    storage.payload = zcompress(json_dumps(data, indent=4))
+	    storage.payload = unicode(zcompress(json_dumps(data, indent=4)), 'ISO-8859-1')
 	    storage.put()
 	    self.cache_set(data, self.cache_key)
 	return data
