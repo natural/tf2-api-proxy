@@ -6,6 +6,7 @@ from logging import info, error
 from os import environ
 from urllib2 import urlopen
 from wsgiref.util import application_uri
+from zlib import compress as zcompress, decompress as zdecompress
 
 from google.appengine.api import memcache
 from google.appengine.ext import db
@@ -114,7 +115,7 @@ class ApiHandler(RequestHandler):
 	    if storage:
 		## this assumes that the value has already been
 		## parsed and cooked at least one time.
-		data = self.load(storage.payload)
+		data = self.load(zdecompress(storage.payload))
 		self.cache_set(data)
 	    else:
 		## 1b. total failure
@@ -127,7 +128,7 @@ class ApiHandler(RequestHandler):
 	    if storage is None:
 		storage = History(url=url)
 	    # reparse because it may have changed
-	    storage.payload = json_dumps(data, indent=4)
+	    storage.payload = zcompress(json_dumps(data, indent=4))
 	    storage.put()
 	    self.cache_set(data, self.cache_key)
 	return data
